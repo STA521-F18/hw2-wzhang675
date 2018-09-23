@@ -1,7 +1,7 @@
 ---
 title: "HW2 STA521 Fall18"
-author: '[Your Name Here, netid and github username here]'
-date: "Due September 23, 2018 5pm"
+author: '[Wei Zhang, wz94 wzhang675]'
+date: "Due September 19, 2018"
 output:
   pdf_document: default
   html_document:
@@ -35,13 +35,26 @@ library(car)
 1. Create a summary of the data.  How many variables have missing data?  Which are quantitative and which are qualtitative?
 
 ```{r}
-
+summary(UN3)
+#We can see from the results that six variables have missing data.
+#(All except Purban have missing data). All variables are quantitative. 
 ```
 
 2. What is the mean and standard deviation of each quantitative predictor?  Provide in a nicely formatted table.
 
 ```{r}
-
+library(knitr)
+df1<-data.frame(matrix(ncol = 3, nrow = 0))
+df1<-rbind(df1,data.frame(t(c("ModernC",mean(na.omit(UN3$ModernC)),sd(na.omit(UN3$ModernC))))))
+df1<-rbind(df1,data.frame(t(c("Change",mean(na.omit(UN3$Change)),sd(na.omit(UN3$Change))))))
+df1<-rbind(df1,data.frame(t(c("PPgdp",mean(na.omit(UN3$PPgdp)),sd(na.omit(UN3$PPgdp))))))
+df1<-rbind(df1,data.frame(t(c("Frate",mean(na.omit(UN3$Frate)),sd(na.omit(UN3$Frate))))))
+df1<-rbind(df1,data.frame(t(c("Pop",mean(na.omit(UN3$Pop)),sd(na.omit(UN3$Pop))))))
+df1<-rbind(df1,data.frame(t(c("Fertility",mean(na.omit(UN3$Fertility)),sd(na.omit(UN3$Fertility))))))
+df1<-rbind(df1,data.frame(t(c("Purban",mean(na.omit(UN3$Purban)),sd(na.omit(UN3$Purban))))))
+varna1<-c("Variable name","mean", "std")
+colnames(df1)<-varna1
+kable(df1)
 ```
 
 
@@ -50,7 +63,20 @@ highlighting the relationships among the predictors. Comment
 on your findings regarding trying to predict `ModernC` from the other variables.  Are there potential outliers, nonlinear relationships or transformations that appear to be needed based on your graphical EDA?
 
 ```{r}
-
+p1<-na.omit(subset(UN3,select=c(Change,ModernC)))
+scatterplot(p1$Change,p1$ModernC,main="Relation between change and modernc")
+#p2<-na.omit(subset(UN3,select=c(PPgdp,ModernC)))
+#scatterplot(p2$PPdgp,p2$ModernC,main="Relation between ppgdp and modernc")
+p4<-na.omit(subset(UN3,select=c(Pop,ModernC)))
+scatterplot(p4$Pop,p4$ModernC,main="Relation between pop and modernc")
+p5<-na.omit(subset(UN3,select=c(Fertility,ModernC)))
+scatterplot(p5$Fertility,p5$ModernC,main="Relation between fretility and modernc")
+p6<-na.omit(subset(UN3,select=c(Purban,ModernC)))
+scatterplot(p6$Purban,p6$ModernC,main="Relation between purban and modernc")
+#It seems a lot of variables have the potential to explain Modernc.
+#we can see from the graph that there might be some outliers in pop
+#variable. The realtion of Change and ModernC might not be linear.
+#And we may need to transform Pop, Fertility and Change variables.
 ```
 
 ## Model Fitting
@@ -58,43 +84,136 @@ on your findings regarding trying to predict `ModernC` from the other variables.
 4.  Use the `lm()` function to perform a multiple linear regression with `ModernC` as the response and all other variables as the predictors, using the formula `ModernC ~ .`, where the `.` includes all remaining variables in the dataframe.  Create  diagnostic residual plot from the linear model object and comment on results regarding assumptions.  How many observations are used in your model fitting?
 
 ```{r}
-
+model1=lm(ModernC~.,data=UN3);
+plot(model1)
+summary(model1)
+#From residual vs Fitted and Scale-location graphs, we can see that  
+#the the variance seems constant for different values. So the
+#assumption that constant variance seems hold.   
+#From Normal Q-Q graph we find that there are lots of points donot
+#lie in the diagonal(the theoretical line), which means the normailty
+#assumption might be violated. From the Residuals vs leverage graph
+#we find that all points has cook disntance less than .5. So none 
+#of them are quiet influencial. 
+#We have 125 observations in the modeling.This is because some obs
+#was deleted from original data due to missingness.
 ```
 
 5. Examine added variable plots `car::avPlot` or `car::avPlots`  for your model above. Are there any plots that suggest that transformations are needed for any of the terms in the model? Describe. Is it likely that any of the localities are influential for any of the terms?  Which localities?  Which terms?  
 
 ```{r}
-
+car::avPlots(model1)
+#
+#Yes,for Fertility, PPgdp, and Pop variables, I think we should 
+#do transformation. For Pop variable, china and india are influential
+#and it seems to be good if we do log or other transformation.
+#For Fertility, It seems to have some kind of convexity and I feel
+#like the relation is not linear and it seems to have expoential
+#relaiton. So I want to transform it as well. Same resaon hold for
+#PPgdp, as it seems not linear.
 ```
 
 6.  Using the Box-Tidwell  `car::boxTidwell` or graphical methods find appropriate transformations of the predictor variables to be used as predictors in the linear model.  If any predictors are negative, you may need to transform so that they are non-negative.  Describe your method and  the resulting transformations.
 
 
 ```{r}
-
+UN3=na.omit(UN3)
+boxTidwell(ModernC~Pop+Fertility+PPgdp,~Change+Purban+Frate,data=UN3)
+#As I mentiond before, I think Pop, Fertility and PPgdp are varialbes
+#that we need to transform. So I put those in the set to
+#transform and put others in the set that we do not need to transform
+#As only change has data that is smaller than zero and I do not think
+#We need to transform it. So we do not to care about that.
+# From the results we can find that Fertility is significant at 10%
+#level and we should transform it with power of 1.346874. However,for
+#Pop and PPgdp variable since they are not significant and there is no
+#great improvement if we did the transformation. SO I decide to keep
+#them unchanged.
 ```
 
 7. Given the selected transformations of the predictors, select a transformation of the response using `MASS::boxcox` or `car::boxCox` and justify.
 
 
 ```{r}
-
+Fertilityt=UN3$Fertility^1.346874;
+bc=boxCox(lm(ModernC~Change+PPgdp+Frate+Pop+Fertilityt+Purban, data=UN3))
+with(bc, x[which.max(y)])
+#From the this result, we know we should transform response to
+#the power of 0.7474747
 ```
 
 8.  Fit the regression using the transformed variables.  Provide residual plots and added variables plots and comment.  If you feel that you need additional transformations of either the response or predictors, repeat any steps until you feel satisfied.
+
+```{r}
+ModernCt=UN3$ModernC^0.7474747;
+model2=lm(ModernCt~Change+PPgdp+Frate+Pop+Fertilityt+Purban,data=UN3);
+plot(model2)
+summary(model2)
+#From the transformation,we can see that the r square improved a lot.
+#Additionally, then normality assumption seems satisfied in the new
+#model.So I am satisfied with this current model.
+```
 
 9. Start by finding the best transformation of the response and then find transformations of the predictors.  Do you end up with a different model than in 8?
 
 
 ```{r}
-
+bc1=boxCox(lm(ModernC~., data=UN3));
+k=with(bc1, x[which.max(y)]);
+k
+#We can see that we should transform the response to the power of k.
+ModernCt2=UN3$ModernC^k;
+model3=lm(ModernCt2~.,data=UN3);
+plot(model3)
+summary(model3)
+car::avPlots(model3)
+#From the avplot,I think for Fertility and PPgdp variable, we should
+#do transformation. Both of them seem to have nolinear relation 
+#So I want to transform them.
+boxTidwell(ModernCt2~PPgdp+Fertility,~Frate+Pop+Change+Purban,data=UN3)
+#From the results we find that only Fertility we need to transform
+#as it is significant. But the power here is differnt from before. 
+#Also, the power for response is also different. So I got a different
+#model.
 ```
 
 10.  Are there any outliers or influential points in the data?  Explain.  If so, refit the model after removing any outliers and comment on residual plots.
 
 
 ```{r}
-
+#Yes, seems china and indina are influential. So I remove them.
+todrop=list("China","India");
+UN3=UN3[!(rownames(UN3) %in% todrop), ];
+model4=lm(ModernC~.,data=UN3);
+plot(model4)
+summary(model4)
+#After remove two influential points,
+#From residual vs Fitted and Scale-location graphs, we can see that  
+#the the variance seems constant for different values. So the
+#assumption that constant variance still holds.   
+#From Normal Q-Q graph we can see it is getting better but there are still lots of points donot lie in the diagonal(the theoretical line),
+#which means the normailty assumption still may be violated. From the
+#Residuals vs leverage graph we find that all points has cook
+#disntance less than .5. So none of them are quiet influencial.
+bc2=boxCox(lm(ModernC~., data=UN3));
+k=with(bc2, x[which.max(y)]);
+k
+ModernCt3=UN3$ModernC^k;
+model4=lm(ModernCt3~.,data=UN3);
+plot(model4)
+summary(model4)
+car::avPlots(model4)
+#Looks like PPgdp and Fertility needs transformation;
+boxTidwell(ModernCt3~PPgdp+Fertility,~Pop+Frate+Change+Purban,data=UN3)
+Fertilityt1=UN3$Fertility^1.399604;
+model5=lm(ModernCt3~PPgdp+Fertilityt1+Pop+Frate+Change+Purban,data=UN3);
+plot(model5)
+summary(model5)
+#model 5 is my final model. We can see from the residual vs Fitted and
+#Scale-location graphs, the the variance seems constant for different
+#values. For Normal Q-Q, normality seems still be a issue but it is
+#getting better. For the last graph, we can see all has small cook's
+#distance which means most of points are not influential.
 ```
 
 ## Summary of Results
@@ -103,7 +222,27 @@ on your findings regarding trying to predict `ModernC` from the other variables.
 
 
 ```{r}
-
+v1=confint(model5,'PPgdp',level=0.95)
+v2=confint(model5,'Fertilityt1',level=0.95)
+v1=rbind(v1,v2)
+v3=confint(model5,'Pop',level=0.95)
+v1=rbind(v1,v3)
+v4=confint(model5,'Frate',level=0.95)
+v1=rbind(v1,v4)
+v5=confint(model5,'Change',level=0.95)
+v1=rbind(v1,v5)
+v6=confint(model5,'Purban',level=0.95)
+v1=rbind(v1,v6)
+v1
+#PS: if in original unit, the 95% for Fertility is:
+-2.306550^(1/1.399604)     -1.303475^(1/1.399604) 
+#interperations:
+#If PPgdp increase 1 other hold same, then resoponse^0.787878 will
+#increase between the confidence interval of PPgdp, and that happens
+#for 95% of all the cases.Same for Pop, Frate, Change, and Purban. For
+#Fertility,if Fertility increase 1, than resoponse^0.787878
+#will increase between the (original unit)confidence interval of Fertilityt1 with 95%
+#confidence level.
 ```
 
 
@@ -111,7 +250,12 @@ on your findings regarding trying to predict `ModernC` from the other variables.
 
 
 ```{r}
-
+#My final model almost satisfied the assumption of linear regression
+#And the we find that expect Fertility, all other variables have 
+#positive relation with the response ModernC. So the US envoy might
+#approximate the level of ModernC by several indicators. As China and
+#India are countries with super big population, so that the ModernC
+#are hard to capture in those two countries. So I delete them. 
 ```
 
 
@@ -120,5 +264,41 @@ on your findings regarding trying to predict `ModernC` from the other variables.
     
 13. Prove that the intercept in the added variable scatter plot will always be zero.  _Hint:  use the fact that if $H$ is the project matrix which contains a column of ones, then $1_n^T (I - H) = 0$.  Use this to show that the sample mean of residuals will always be zero if there is an intercept._
 
+Answer:
+As $Y$~$x_1+x_2...$ (xi not in right side)        
+$X_i$~$x_1+x_2...$ (xi not in right side)       
+$\hat{e_Y}=(I-H)y$       
+$\hat{e_{xi}}=(I-H)x_i$        
+now the regression form is$\hat{e_Y}$~$\hat{e_{xi}}$       
+Let's calculate $\hat{\beta_0}*\mathbf{1}$      
+by defintion it should be        $[I-\hat{e_{xi}}*(\hat{e_{xi}}'\hat{e_{xi}})^{-1}\hat{e_{xi}}']\hat{e_y}$           
+$=[I-\frac{\hat{e_{xi}}*\hat{e_{xi}}'}{\sum{e_{xi}^{2}}}]e_y$       
+$=[I-H]y-[\frac{(I-H)'x_i x_i'(I-H)}{\sum{e_{xi}^{2}}}]e_y$       
+As (I-H) is idempotent        
+$=[I-H]y-[\frac{(I-H)\sum{x_i^2}}{\sum{e_{xi}^{2}}}](I-H)y$         
+$=[I-H]y-\frac{(I-H)y\sum{x_i^2}}{\sum{e_{xi}^{2}}}$           
+by hint multiply by $1_n^T$ (This hint means theoretical the sum of residule euqals to zero)             
+$=1_n^T[I-H]y-\frac{1_n^T(I-H)y\sum{x_i^2}}{\sum{e_{xi}^{2}}}$            
+$=0*y-\frac{0*\sum{x_i^2}}{\sum{e_{xi}^{2}}}$    
+$=0_n^T$     
+so $\hat{\beta_0}$should be zero to make $\hat{\beta_0}\mathbf{1}$ to be zero. DONE!
 
-14. For multiple regression with more than 2 predictors, say a full model given by `Y ~ X1 + X2 + ... Xp`   we create the added variable plot for variable `j` by regressing `Y` on all of the `X`'s except `Xj` to form `e_Y` and then regressing `Xj` on all of the other X's to form `e_X`.  Confirm that the slope in a manually constructed added variable plot for one of the predictors  in Ex. 10 is the same as the estimate from your model. 
+
+14. For multiple regression with more than 2 predictors, say a full model given by `Y ~ X1 + X2 + ... Xp`   we create the added variable plot for variable `j` by regressing `Y` on all of the `X`'s except `Xj` to form `e_Y` and then regressing `Xj` on all of the other X's to form `e_X`.  Confirm that the slope in the manually constructed added variable plot for one of the predictors  in Ex. 10 is the same as the estimate from your model. 
+
+Answer:
+
+```{r}
+# if we regress Modernc on all 6 variables
+model4=lm(ModernCt3~Pop+PPgdp+Purban+Fertility+Frate+Change,data=UN3);
+summary(model4);
+#we can see the coefficient for change is 2.018e+00;
+#regress without Change
+model7=lm(ModernCt3~Pop+PPgdp+Purban+Fertility+Frate,data=UN3)
+ey=resid(model7)
+model8=lm(Change~Pop+PPgdp+Purban+Fertility+Frate,data=UN3)
+ex=resid(model8)
+model9=lm(ey~ex)
+summary(model9)
+#we can see the slope is 2.018e+00; which is same as I calcualte before.
+```
